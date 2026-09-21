@@ -1,5 +1,6 @@
 import customtkinter as ctk
 import json
+from datetime import datetime
 
 
 ctk.set_appearance_mode("dark")
@@ -7,21 +8,36 @@ ctk.set_default_color_theme("blue")
 
 
 app = ctk.CTk()
-app.title("ExpenseFlow")
-app.geometry("950x760")
+app.title("BudgetAnalyzer")
+app.geometry("1050x780")
 app.resizable(False, False)
 
-
-expenses = []
-total_spent = 0.0
 FILE_NAME = "expenses.json"
 
-category_totals = {
-    "Food": 0.0,
-    "Transport": 0.0,
-    "Education": 0.0,
-    "Shopping": 0.0,
-    "Other": 0.0
+expenses = []
+
+categories = [
+    "Food",
+    "Transport",
+    "Education",
+    "Shopping",
+    "Bills",
+    "Other"
+]
+
+payment_methods = [
+    "Cash",
+    "Card",
+    "UPI"
+]
+
+category_icons = {
+    "Food": "🍔",
+    "Transport": "🚗",
+    "Education": "📚",
+    "Shopping": "🛍",
+    "Bills": "💡",
+    "Other": "📦"
 }
 
 
@@ -30,174 +46,333 @@ def save_expenses():
         json.dump(expenses, file, indent=4)
 
 
-def update_category_summary():
-    for category in category_totals:
-        category_labels[category].configure(
-            text=f"{category}\nRs. {category_totals[category]:,.2f}"
-        )
+def load_expenses():
+    global expenses
+
+    try:
+        with open(FILE_NAME, "r") as file:
+            expenses = json.load(file)
+
+    except FileNotFoundError:
+        expenses = []
 
 
-def display_expense(expense):
-    amount = expense["amount"]
-    category = expense["category"]
-    note = expense["note"]
+def get_total_spent():
+    return sum(expense["amount"] for expense in expenses)
 
-    expense_card = ctk.CTkFrame(
-        expense_list_frame,
-        corner_radius=12,
-        fg_color=("#F3F4F6", "#20242B")
+
+def get_monthly_spent():
+    current_month = datetime.now().strftime("%Y-%m")
+
+    total = 0
+
+    for expense in expenses:
+        if expense.get("date", "").startswith(current_month):
+            total += expense["amount"]
+
+    return total
+
+
+def get_category_total(category):
+    return sum(
+        expense["amount"]
+        for expense in expenses
+        if expense["category"] == category
     )
 
-    expense_card.pack(
+
+def refresh_dashboard():
+    total = get_total_spent()
+    monthly = get_monthly_spent()
+
+    total_spent_label.configure(
+        text=f"Rs. {total:,.2f}"
+    )
+
+    monthly_label.configure(
+        text=f"Rs. {monthly:,.2f}"
+    )
+
+    budget_left = max(50000 - monthly, 0)
+
+    budget_label.configure(
+        text=f"Rs. {budget_left:,.2f}"
+    )
+
+    refresh_expenses()
+    refresh_categories()
+
+
+def create_expense_card(expense):
+    category = expense["category"]
+    amount = expense["amount"]
+    note = expense.get("note", "")
+    payment = expense.get("payment", "Cash")
+
+    card = ctk.CTkFrame(
+        expense_list,
+        corner_radius=14,
+        fg_color="#151D2D",
+        border_width=1,
+        border_color="#202B40"
+    )
+
+    card.pack(
         fill="x",
         pady=5
     )
 
-    left_frame = ctk.CTkFrame(
-        expense_card,
+    icon_frame = ctk.CTkFrame(
+        card,
+        width=42,
+        height=42,
+        corner_radius=12,
+        fg_color="#1E2B43"
+    )
+
+    icon_frame.pack(
+        side="left",
+        padx=(12, 10),
+        pady=10
+    )
+
+    icon_frame.pack_propagate(False)
+
+    ctk.CTkLabel(
+        icon_frame,
+        text=category_icons.get(category, "📦"),
+        font=ctk.CTkFont(size=18)
+    ).pack(expand=True)
+
+    details = ctk.CTkFrame(
+        card,
         fg_color="transparent"
     )
-    left_frame.pack(
+
+    details.pack(
         side="left",
         fill="x",
         expand=True,
-        padx=15,
-        pady=12
+        pady=9
     )
 
-    category_label = ctk.CTkLabel(
-        left_frame,
+    ctk.CTkLabel(
+        details,
         text=category,
         font=ctk.CTkFont(
-            size=15,
+            size=14,
+            weight="bold"
+        )
+    ).pack(
+        anchor="w"
+    )
+
+    description = note if note else "No description"
+
+    ctk.CTkLabel(
+        details,
+        text=description,
+        text_color="#7F8BA3",
+        font=ctk.CTkFont(size=11)
+    ).pack(
+        anchor="w",
+        pady=(2, 0)
+    )
+
+    badge = ctk.CTkLabel(
+        card,
+        text=payment.upper(),
+        width=55,
+        height=20,
+        corner_radius=6,
+        fg_color="#253452",
+        text_color="#8FB4FF",
+        font=ctk.CTkFont(
+            size=9,
             weight="bold"
         )
     )
 
-    category_label.pack(
-        anchor="w"
-    )
-
-    note_label = ctk.CTkLabel(
-        left_frame,
-        text=note if note else "No description",
-        font=ctk.CTkFont(size=12),
-        text_color=("gray40", "gray70")
-    )
-
-    note_label.pack(
-        anchor="w",
-        pady=(3, 0)
+    badge.pack(
+        side="right",
+        padx=8
     )
 
     amount_label = ctk.CTkLabel(
-        expense_card,
-        text=f"Rs. {amount:,.2f}",
+        card,
+        text=f"-Rs. {amount:,.2f}",
+        text_color="#FF7272",
         font=ctk.CTkFont(
-            size=15,
+            size=14,
             weight="bold"
         )
     )
 
     amount_label.pack(
         side="right",
-        padx=20
+        padx=(5, 15)
     )
 
 
-def load_expenses():
-    global total_spent
+def refresh_expenses():
+    for widget in expense_list.winfo_children():
+        widget.destroy()
 
-    try:
-        with open(FILE_NAME, "r") as file:
-            saved_expenses = json.load(file)
+    if not expenses:
+        ctk.CTkLabel(
+            expense_list,
+            text="No expenses yet\nAdd your first expense above",
+            text_color="#6F7C92",
+            font=ctk.CTkFont(size=13)
+        ).pack(pady=35)
 
-        for expense in saved_expenses:
-            expenses.append(expense)
+        return
 
-            amount = expense["amount"]
-            category = expense["category"]
+    recent_expenses = expenses[-8:]
+    recent_expenses.reverse()
 
-            total_spent += amount
+    for expense in recent_expenses:
+        create_expense_card(expense)
 
-            if category in category_totals:
-                category_totals[category] += amount
 
-            display_expense(expense)
+def refresh_categories():
+    for widget in category_container.winfo_children():
+        widget.destroy()
 
-        total_label.configure(
-            text=f"Rs. {total_spent:,.2f}"
+    totals = {}
+
+    for category in categories:
+        totals[category] = get_category_total(category)
+
+    max_value = max(totals.values()) if totals else 0
+
+    for category in categories:
+        amount = totals[category]
+
+        row = ctk.CTkFrame(
+            category_container,
+            fg_color="transparent"
         )
 
-        month_label.configure(
-            text=f"Rs. {total_spent:,.2f}"
+        row.pack(
+            fill="x",
+            pady=4
         )
 
-        update_category_summary()
+        ctk.CTkLabel(
+            row,
+            text=f"{category_icons.get(category, '📦')}  {category}",
+            width=120,
+            anchor="w",
+            font=ctk.CTkFont(size=11)
+        ).pack(side="left")
 
-    except FileNotFoundError:
-        empty_label.pack(
-            pady=40
+        bar_background = ctk.CTkFrame(
+            row,
+            height=8,
+            corner_radius=5,
+            fg_color="#202A3D"
         )
+
+        bar_background.pack(
+            side="left",
+            fill="x",
+            expand=True,
+            padx=8
+        )
+
+        bar_background.pack_propagate(False)
+
+        if max_value > 0:
+            width_ratio = amount / max_value
+            width = max(5, int(250 * width_ratio))
+
+            bar = ctk.CTkFrame(
+                bar_background,
+                width=width,
+                height=8,
+                corner_radius=5,
+                fg_color="#4F8CFF"
+            )
+
+            bar.pack(
+                side="left",
+                fill="y"
+            )
+
+        ctk.CTkLabel(
+            row,
+            text=f"Rs. {amount:,.0f}",
+            width=85,
+            anchor="e",
+            font=ctk.CTkFont(
+                size=10,
+                weight="bold"
+            )
+        ).pack(side="right")
 
 
 def add_expense():
-    global total_spent
-
     amount_text = amount_entry.get().strip()
     category = category_box.get()
     note = note_entry.get().strip()
+    payment = payment_box.get()
 
     if not amount_text:
+        status_label.configure(
+            text="Enter an amount",
+            text_color="#FF7272"
+        )
         return
 
     try:
         amount = float(amount_text)
     except ValueError:
+        status_label.configure(
+            text="Enter a valid amount",
+            text_color="#FF7272"
+        )
         return
 
     if amount <= 0:
+        status_label.configure(
+            text="Amount must be greater than 0",
+            text_color="#FF7272"
+        )
         return
 
     expense = {
         "amount": amount,
         "category": category,
-        "note": note
+        "note": note,
+        "payment": payment,
+        "date": datetime.now().strftime("%Y-%m-%d")
     }
 
     expenses.append(expense)
 
-    total_spent += amount
-
-    if category in category_totals:
-        category_totals[category] += amount
-
-    empty_label.pack_forget()
-
-    display_expense(expense)
-
-    total_label.configure(
-        text=f"Rs. {total_spent:,.2f}"
-    )
-
-    month_label.configure(
-        text=f"Rs. {total_spent:,.2f}"
-    )
-
-    update_category_summary()
-
     save_expenses()
 
-    amount_entry.delete(
-        0,
-        "end"
+    amount_entry.delete(0, "end")
+    note_entry.delete(0, "end")
+
+    status_label.configure(
+        text="Expense added successfully ✓",
+        text_color="#4ADE80"
     )
 
-    note_entry.delete(
-        0,
-        "end"
-    )
+    refresh_dashboard()
 
+
+load_expenses()
+
+
+app.configure(
+    fg_color="#08101F"
+)
+
+
+# Header
 
 header = ctk.CTkFrame(
     app,
@@ -207,46 +382,129 @@ header = ctk.CTkFrame(
 header.pack(
     fill="x",
     padx=35,
-    pady=(28, 15)
+    pady=(28, 10)
 )
 
 
-header_left = ctk.CTkFrame(
+brand = ctk.CTkFrame(
     header,
     fg_color="transparent"
 )
 
-header_left.pack(
-    side="left"
-)
+brand.pack(side="left")
 
 
-title = ctk.CTkLabel(
-    header_left,
-    text="💰  ExpenseFlow",
+ctk.CTkLabel(
+    brand,
+    text="◈",
+    text_color="#4F8CFF",
     font=ctk.CTkFont(
-        size=30,
+        size=29,
         weight="bold"
     )
+).pack(side="left", padx=(0, 8))
+
+
+brand_text = ctk.CTkFrame(
+    brand,
+    fg_color="transparent"
 )
 
-title.pack(
-    anchor="w"
+brand_text.pack(side="left")
+
+
+ctk.CTkLabel(
+    brand_text,
+    text="BudgetAnalyzer",
+    font=ctk.CTkFont(
+        size=22,
+        weight="bold"
+    )
+).pack(anchor="w")
+
+
+ctk.CTkLabel(
+    brand_text,
+    text="EXPENSE TRACKER APP",
+    text_color="#65748D",
+    font=ctk.CTkFont(
+        size=9,
+        weight="bold"
+    )
+).pack(anchor="w")
+
+
+login_card = ctk.CTkFrame(
+    header,
+    width=135,
+    height=46,
+    corner_radius=12,
+    fg_color="#111B2D",
+    border_width=1,
+    border_color="#24314A"
+)
+
+login_card.pack(
+    side="right"
+)
+
+login_card.pack_propagate(False)
+
+
+ctk.CTkLabel(
+    login_card,
+    text="◉  No bank login",
+    font=ctk.CTkFont(
+        size=11,
+        weight="bold"
+    )
+).pack(pady=(7, 0))
+
+
+ctk.CTkLabel(
+    login_card,
+    text="Free · private by design",
+    text_color="#687891",
+    font=ctk.CTkFont(size=8)
+).pack()
+
+
+# Month header
+
+month_header = ctk.CTkFrame(
+    app,
+    fg_color="transparent"
+)
+
+month_header.pack(
+    fill="x",
+    padx=85,
+    pady=(10, 8)
 )
 
 
-subtitle = ctk.CTkLabel(
-    header_left,
-    text="Smart way to manage your daily expenses",
-    font=ctk.CTkFont(size=13),
-    text_color=("gray40", "gray70")
-)
+ctk.CTkLabel(
+    month_header,
+    text="Expenses · " + datetime.now().strftime("%B"),
+    font=ctk.CTkFont(
+        size=17,
+        weight="bold"
+    )
+).pack(side="left")
 
-subtitle.pack(
-    anchor="w",
-    pady=(3, 0)
-)
 
+ctk.CTkLabel(
+    month_header,
+    text="UPI  ·  CARD  ·  CASH",
+    text_color="#71819A",
+    font=ctk.CTkFont(
+        size=9,
+        weight="bold"
+    )
+).pack(side="right")
+
+
+# Summary cards
 
 summary = ctk.CTkFrame(
     app,
@@ -255,322 +513,361 @@ summary = ctk.CTkFrame(
 
 summary.pack(
     fill="x",
-    padx=35,
-    pady=5
+    padx=85,
+    pady=4
 )
 
 
-total_card = ctk.CTkFrame(
-    summary,
-    corner_radius=18,
-    fg_color=("#E8F1FF", "#17263A")
-)
-
-total_card.pack(
-    side="left",
-    fill="both",
-    expand=True,
-    padx=(0, 8)
-)
-
-
-ctk.CTkLabel(
-    total_card,
-    text="TOTAL SPENT",
-    font=ctk.CTkFont(
-        size=12,
-        weight="bold"
-    ),
-    text_color=("gray40", "gray70")
-).pack(
-    anchor="w",
-    padx=22,
-    pady=(17, 3)
-)
-
-
-total_label = ctk.CTkLabel(
-    total_card,
-    text="Rs. 0.00",
-    font=ctk.CTkFont(
-        size=27,
-        weight="bold"
-    )
-)
-
-total_label.pack(
-    anchor="w",
-    padx=22,
-    pady=(0, 17)
-)
-
-
-month_card = ctk.CTkFrame(
-    summary,
-    corner_radius=18,
-    fg_color=("#F1EBFF", "#28203B")
-)
-
-month_card.pack(
-    side="left",
-    fill="both",
-    expand=True,
-    padx=(8, 0)
-)
-
-
-ctk.CTkLabel(
-    month_card,
-    text="THIS MONTH",
-    font=ctk.CTkFont(
-        size=12,
-        weight="bold"
-    ),
-    text_color=("gray40", "gray70")
-).pack(
-    anchor="w",
-    padx=22,
-    pady=(17, 3)
-)
-
-
-month_label = ctk.CTkLabel(
-    month_card,
-    text="Rs. 0.00",
-    font=ctk.CTkFont(
-        size=27,
-        weight="bold"
-    )
-)
-
-month_label.pack(
-    anchor="w",
-    padx=22,
-    pady=(0, 17)
-)
-
-
-form = ctk.CTkFrame(
-    app,
-    corner_radius=18
-)
-
-form.pack(
-    fill="x",
-    padx=35,
-    pady=15
-)
-
-
-ctk.CTkLabel(
-    form,
-    text="Add New Expense",
-    font=ctk.CTkFont(
-        size=19,
-        weight="bold"
-    )
-).pack(
-    anchor="w",
-    padx=22,
-    pady=(17, 10)
-)
-
-
-amount_entry = ctk.CTkEntry(
-    form,
-    placeholder_text="Amount (Rs.)",
-    height=42,
-    corner_radius=10
-)
-
-amount_entry.pack(
-    fill="x",
-    padx=22,
-    pady=5
-)
-
-
-category_box = ctk.CTkComboBox(
-    form,
-    values=[
-        "Food",
-        "Transport",
-        "Education",
-        "Shopping",
-        "Other"
-    ],
-    height=42,
-    corner_radius=10
-)
-
-category_box.pack(
-    fill="x",
-    padx=22,
-    pady=5
-)
-
-category_box.set("Food")
-
-
-note_entry = ctk.CTkEntry(
-    form,
-    placeholder_text="Description",
-    height=42,
-    corner_radius=10
-)
-
-note_entry.pack(
-    fill="x",
-    padx=22,
-    pady=5
-)
-
-
-add_button = ctk.CTkButton(
-    form,
-    text="+  Add Expense",
-    height=42,
-    corner_radius=10,
-    font=ctk.CTkFont(
-        size=14,
-        weight="bold"
-    ),
-    command=add_expense
-)
-
-add_button.pack(
-    anchor="e",
-    padx=22,
-    pady=(7, 17)
-)
-
-
-category_summary = ctk.CTkFrame(
-    app,
-    corner_radius=18
-)
-
-category_summary.pack(
-    fill="x",
-    padx=35,
-    pady=5
-)
-
-
-ctk.CTkLabel(
-    category_summary,
-    text="Spending by Category",
-    font=ctk.CTkFont(
-        size=17,
-        weight="bold"
-    )
-).pack(
-    anchor="w",
-    padx=22,
-    pady=(15, 8)
-)
-
-
-category_labels_frame = ctk.CTkFrame(
-    category_summary,
-    fg_color="transparent"
-)
-
-category_labels_frame.pack(
-    fill="x",
-    padx=15,
-    pady=(0, 15)
-)
-
-
-category_labels = {}
-
-
-for category in category_totals:
-
+def summary_card(parent, title, value, value_color="#E8EDF7"):
     card = ctk.CTkFrame(
-        category_labels_frame,
-        corner_radius=12,
-        fg_color=("#F3F4F6", "#20242B")
+        parent,
+        height=78,
+        corner_radius=13,
+        fg_color="#111A2B",
+        border_width=1,
+        border_color="#1E2B42"
     )
 
     card.pack(
         side="left",
         fill="both",
         expand=True,
-        padx=5
+        padx=4
+    )
+
+    card.pack_propagate(False)
+
+    ctk.CTkLabel(
+        card,
+        text=title,
+        text_color="#718099",
+        font=ctk.CTkFont(
+            size=9,
+            weight="bold"
+        )
+    ).pack(
+        anchor="w",
+        padx=14,
+        pady=(12, 2)
     )
 
     label = ctk.CTkLabel(
         card,
-        text=f"{category}\nRs. 0.00",
+        text=value,
+        text_color=value_color,
         font=ctk.CTkFont(
-            size=12,
+            size=17,
             weight="bold"
         )
     )
 
     label.pack(
-        pady=10
+        anchor="w",
+        padx=14
     )
 
-    category_labels[category] = label
+    return label
 
 
-recent = ctk.CTkFrame(
-    app,
-    corner_radius=18
+total_spent_label = summary_card(
+    summary,
+    "SPENT",
+    "Rs. 0.00"
 )
 
-recent.pack(
+budget_label = summary_card(
+    summary,
+    "BUDGET LEFT",
+    "Rs. 50,000.00",
+    "#4ADE80"
+)
+
+monthly_label = summary_card(
+    summary,
+    "THIS MONTH",
+    "Rs. 0.00"
+)
+
+
+# Main content
+
+content = ctk.CTkFrame(
+    app,
+    fg_color="transparent"
+)
+
+content.pack(
     fill="both",
     expand=True,
-    padx=35,
-    pady=(10, 25)
+    padx=85,
+    pady=10
 )
 
 
+left_panel = ctk.CTkFrame(
+    content,
+    corner_radius=16,
+    fg_color="#0F1829",
+    border_width=1,
+    border_color="#1C2940"
+)
+
+left_panel.pack(
+    side="left",
+    fill="both",
+    expand=True,
+    padx=(0, 7)
+)
+
+
+right_panel = ctk.CTkFrame(
+    content,
+    width=285,
+    corner_radius=16,
+    fg_color="#0F1829",
+    border_width=1,
+    border_color="#1C2940"
+)
+
+right_panel.pack(
+    side="right",
+    fill="y",
+    padx=(7, 0)
+)
+
+right_panel.pack_propagate(False)
+
+
+# Add expense
+
 ctk.CTkLabel(
-    recent,
-    text="Recent Expenses",
+    left_panel,
+    text="Add Expense",
     font=ctk.CTkFont(
-        size=19,
+        size=15,
         weight="bold"
     )
 ).pack(
     anchor="w",
-    padx=22,
+    padx=18,
     pady=(15, 8)
 )
 
 
-expense_list_frame = ctk.CTkScrollableFrame(
-    recent,
+amount_entry = ctk.CTkEntry(
+    left_panel,
+    placeholder_text="Amount (Rs.)",
+    height=38,
+    corner_radius=9,
+    fg_color="#151F32",
+    border_color="#263650"
+)
+
+amount_entry.pack(
+    fill="x",
+    padx=18,
+    pady=4
+)
+
+
+category_box = ctk.CTkComboBox(
+    left_panel,
+    values=categories,
+    height=38,
+    corner_radius=9,
+    fg_color="#151F32",
+    border_color="#263650",
+    button_color="#243554"
+)
+
+category_box.pack(
+    fill="x",
+    padx=18,
+    pady=4
+)
+
+category_box.set("Food")
+
+
+note_entry = ctk.CTkEntry(
+    left_panel,
+    placeholder_text="Description",
+    height=38,
+    corner_radius=9,
+    fg_color="#151F32",
+    border_color="#263650"
+)
+
+note_entry.pack(
+    fill="x",
+    padx=18,
+    pady=4
+)
+
+
+payment_box = ctk.CTkComboBox(
+    left_panel,
+    values=payment_methods,
+    height=38,
+    corner_radius=9,
+    fg_color="#151F32",
+    border_color="#263650",
+    button_color="#243554"
+)
+
+payment_box.pack(
+    fill="x",
+    padx=18,
+    pady=4
+)
+
+payment_box.set("Cash")
+
+
+button_row = ctk.CTkFrame(
+    left_panel,
     fg_color="transparent"
 )
 
-expense_list_frame.pack(
+button_row.pack(
+    fill="x",
+    padx=18,
+    pady=(5, 10)
+)
+
+
+status_label = ctk.CTkLabel(
+    button_row,
+    text="",
+    font=ctk.CTkFont(size=10)
+)
+
+status_label.pack(side="left")
+
+
+ctk.CTkButton(
+    button_row,
+    text="+  Add Expense",
+    width=125,
+    height=34,
+    corner_radius=9,
+    font=ctk.CTkFont(
+        size=11,
+        weight="bold"
+    ),
+    command=add_expense
+).pack(side="right")
+
+
+# Recent expenses
+
+ctk.CTkLabel(
+    left_panel,
+    text="Recent Expenses",
+    font=ctk.CTkFont(
+        size=15,
+        weight="bold"
+    )
+).pack(
+    anchor="w",
+    padx=18,
+    pady=(2, 6)
+)
+
+
+expense_list = ctk.CTkScrollableFrame(
+    left_panel,
+    fg_color="transparent",
+    scrollbar_button_color="#263650"
+)
+
+expense_list.pack(
     fill="both",
     expand=True,
-    padx=12,
-    pady=(0, 12)
+    padx=8,
+    pady=(0, 10)
 )
 
 
-empty_label = ctk.CTkLabel(
-    expense_list_frame,
-    text="No expenses yet.\nAdd your first expense above.",
-    font=ctk.CTkFont(size=13),
-    text_color=("gray45", "gray65")
-)
+# Right panel
 
-
-load_expenses()
-
-if not expenses:
-    empty_label.pack(
-        pady=40
+ctk.CTkLabel(
+    right_panel,
+    text="Spending Overview",
+    font=ctk.CTkFont(
+        size=15,
+        weight="bold"
     )
+).pack(
+    anchor="w",
+    padx=18,
+    pady=(17, 4)
+)
 
+
+ctk.CTkLabel(
+    right_panel,
+    text="By category",
+    text_color="#687891",
+    font=ctk.CTkFont(size=10)
+).pack(
+    anchor="w",
+    padx=18
+)
+
+
+category_container = ctk.CTkFrame(
+    right_panel,
+    fg_color="transparent"
+)
+
+category_container.pack(
+    fill="x",
+    padx=18,
+    pady=12
+)
+
+
+ctk.CTkFrame(
+    right_panel,
+    height=1,
+    fg_color="#202C42"
+).pack(
+    fill="x",
+    padx=18,
+    pady=5
+)
+
+
+ctk.CTkLabel(
+    right_panel,
+    text="Quick Stats",
+    font=ctk.CTkFont(
+        size=13,
+        weight="bold"
+    )
+).pack(
+    anchor="w",
+    padx=18,
+    pady=(10, 5)
+)
+
+
+ctk.CTkLabel(
+    right_panel,
+    text="💰  Track every expense\n\n"
+         "📊  Understand your spending\n\n"
+         "🔒  Your data stays local",
+    justify="left",
+    text_color="#7D8BA2",
+    font=ctk.CTkFont(size=10),
+    anchor="w"
+).pack(
+    anchor="w",
+    padx=18
+)
+
+
+refresh_dashboard()
 
 app.mainloop()
