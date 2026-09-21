@@ -1,0 +1,34 @@
+[
+    {
+        "amount": 20.0,
+        "category": "Food",
+        "note": "a",
+        "payment": "Cash",
+        "date": "2026-09-21",
+        "time": "10:22:49 PM"
+    },
+    {
+        "amount": 11.0,
+        "category": "Shopping",
+        "note": "a",
+        "payment": "Cash",
+        "date": "2026-09-21",
+        "time": "10:23:12 PM"
+    },
+    {
+        "amount": 100.0,
+        "category": "Food",
+        "note": "a",
+        "payment": "Cash",
+        "date": "2026-09-21",
+        "time": "10:35:02 PM"
+    },
+    {
+        "amount": 111.0,
+        "category": "Shopping",
+        "note": "q",
+        "payment": "Cash",
+        "date": "2026-09-21",
+        "time": "10:35:13 PM"
+    }
+]
