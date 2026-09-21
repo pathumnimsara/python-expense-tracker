@@ -19,11 +19,10 @@ SETTINGS_FILE = "settings.json"
 
 expenses = []
 monthly_budget = 50000.0
-dark_mode = True
 mobile_layout = False
 
 
-dark_colors = {
+C = {
     "bg": "#08101F",
     "panel": "#0F1829",
     "card": "#111A2B",
@@ -40,28 +39,6 @@ dark_colors = {
     "red": "#FF7272",
     "orange": "#FFB86C"
 }
-
-
-light_colors = {
-    "bg": "#F3F6FB",
-    "panel": "#FFFFFF",
-    "card": "#FFFFFF",
-    "input": "#F4F6FA",
-    "border": "#DCE3EE",
-    "border2": "#CBD5E1",
-    "text": "#172033",
-    "muted": "#667085",
-    "dim": "#8993A5",
-    "blue": "#3978F6",
-    "blue_dark": "#EAF1FF",
-    "blue_hover": "#DCE8FF",
-    "green": "#16A34A",
-    "red": "#DC4444",
-    "orange": "#D97706"
-}
-
-
-C = dark_colors
 
 
 default_categories = [
@@ -214,117 +191,6 @@ def format_date_time(expense):
     return date_value
 
 
-def apply_theme():
-    global C
-
-    C = dark_colors if dark_mode else light_colors
-
-    app.configure(
-        fg_color=C["bg"]
-    )
-
-    update_theme_widgets()
-
-
-def toggle_theme():
-    global dark_mode
-
-    dark_mode = not dark_mode
-
-    ctk.set_appearance_mode(
-        "dark" if dark_mode else "light"
-    )
-
-    theme_button.configure(
-        text="☀ Light" if dark_mode else "☾ Dark"
-    )
-
-    apply_theme()
-
-
-def update_theme_widgets():
-    if not app.winfo_exists():
-        return
-
-    try:
-        header.configure(
-            fg_color="transparent"
-        )
-
-        content.configure(
-            fg_color="transparent"
-        )
-
-        summary.configure(
-            fg_color="transparent"
-        )
-
-        left_panel.configure(
-            fg_color=C["panel"],
-            border_color=C["border"]
-        )
-
-        right_panel.configure(
-            fg_color=C["panel"],
-            border_color=C["border"]
-        )
-
-        for card in summary_cards:
-            card.configure(
-                fg_color=C["card"],
-                border_color=C["border"]
-            )
-
-        for label in main_text_labels:
-            label.configure(
-                text_color=C["text"]
-            )
-
-        for label in muted_labels:
-            label.configure(
-                text_color=C["muted"]
-            )
-
-        theme_button.configure(
-            fg_color=C["blue_dark"],
-            hover_color=C["blue_hover"],
-            text_color=C["blue"]
-        )
-
-        clear_button.configure(
-            fg_color=C["blue_dark"],
-            hover_color=C["blue_hover"],
-            text_color=C["red"]
-        )
-
-        budget_card.configure(
-            fg_color=C["card"],
-            border_color=C["border"]
-        )
-
-        budget_hint.configure(
-            text_color=C["dim"]
-        )
-
-        for entry in input_widgets:
-            entry.configure(
-                fg_color=C["input"],
-                border_color=C["border2"]
-            )
-
-        for button in secondary_buttons:
-            button.configure(
-                fg_color=C["blue_dark"],
-                hover_color=C["blue_hover"],
-                text_color=C["blue"]
-            )
-
-        refresh_dashboard()
-
-    except Exception:
-        pass
-
-
 def set_budget():
     global monthly_budget
 
@@ -335,6 +201,7 @@ def set_budget():
     window.configure(
         fg_color=C["bg"]
     )
+
     window.transient(app)
     window.grab_set()
 
@@ -365,7 +232,9 @@ def set_budget():
         corner_radius=10,
         placeholder_text="Monthly budget",
         fg_color=C["input"],
-        border_color=C["border2"]
+        border_color=C["border2"],
+        text_color=C["text"],
+        placeholder_text_color=C["muted"]
     )
 
     entry.pack(
@@ -426,10 +295,6 @@ def set_budget():
         text="Save Budget",
         height=42,
         corner_radius=10,
-        font=ctk.CTkFont(
-            size=12,
-            weight="bold"
-        ),
         command=save_budget
     ).pack(
         fill="x",
@@ -456,9 +321,6 @@ def set_budget():
 def clear_all():
     global expenses
     global monthly_budget
-
-    if not expenses and monthly_budget == 0:
-        return
 
     answer = messagebox.askyesno(
         "Clear All Data",
@@ -591,6 +453,7 @@ def edit_expense(index):
     window.configure(
         fg_color=C["bg"]
     )
+
     window.transient(app)
     window.grab_set()
 
@@ -611,6 +474,8 @@ def edit_expense(index):
         height=40,
         fg_color=C["input"],
         border_color=C["border2"],
+        text_color=C["text"],
+        placeholder_text_color=C["muted"],
         placeholder_text="Amount"
     )
 
@@ -629,7 +494,12 @@ def edit_expense(index):
         window,
         values=get_all_categories(),
         state="normal",
-        height=40
+        height=40,
+        fg_color=C["input"],
+        border_color=C["border2"],
+        text_color=C["text"],
+        button_color=C["blue_dark"],
+        button_hover_color=C["blue_hover"]
     )
 
     category.pack(
@@ -647,6 +517,8 @@ def edit_expense(index):
         height=40,
         fg_color=C["input"],
         border_color=C["border2"],
+        text_color=C["text"],
+        placeholder_text_color=C["muted"],
         placeholder_text="Description"
     )
 
@@ -664,7 +536,12 @@ def edit_expense(index):
     payment = ctk.CTkComboBox(
         window,
         values=payment_methods,
-        height=40
+        height=40,
+        fg_color=C["input"],
+        border_color=C["border2"],
+        text_color=C["text"],
+        button_color=C["blue_dark"],
+        button_hover_color=C["blue_hover"]
     )
 
     payment.pack(
@@ -734,10 +611,6 @@ def edit_expense(index):
         text="Save Changes",
         height=42,
         corner_radius=10,
-        font=ctk.CTkFont(
-            size=12,
-            weight="bold"
-        ),
         command=save_edit
     ).pack(
         fill="x",
@@ -850,8 +723,8 @@ def create_expense_card(index, expense):
         width=28,
         height=25,
         corner_radius=6,
-        fg_color="#351F2A",
-        hover_color="#512633",
+        fg_color=C["blue_dark"],
+        hover_color=C["blue_hover"],
         text_color=C["red"],
         command=lambda i=index: delete_expense(i)
     ).pack(
@@ -1005,9 +878,7 @@ def refresh_categories():
 
         width = max(
             5,
-            int(
-                100 * total / maximum
-            )
+            int(100 * total / maximum)
         )
 
         ctk.CTkFrame(
@@ -1077,16 +948,14 @@ def refresh_dashboard():
         text=f"Rs. {monthly:,.2f}"
     )
 
-    if left >= 0:
-        budget_label.configure(
-            text=f"Rs. {left:,.2f}",
-            text_color=C["green"]
-        )
-    else:
-        budget_label.configure(
-            text=f"-Rs. {abs(left):,.2f}",
-            text_color=C["red"]
-        )
+    budget_label.configure(
+        text=(
+            f"Rs. {left:,.2f}"
+            if left >= 0
+            else f"-Rs. {abs(left):,.2f}"
+        ),
+        text_color=C["green"] if left >= 0 else C["red"]
+    )
 
     refresh_budget_progress()
     refresh_expenses()
@@ -1251,32 +1120,10 @@ header_buttons.pack(
 )
 
 
-theme_button = ctk.CTkButton(
-    header_buttons,
-    text="☀ Light",
-    width=80,
-    height=32,
-    corner_radius=8,
-    fg_color=C["blue_dark"],
-    hover_color=C["blue_hover"],
-    text_color=C["blue"],
-    font=ctk.CTkFont(
-        size=9,
-        weight="bold"
-    ),
-    command=toggle_theme
-)
-
-theme_button.pack(
-    side="left",
-    padx=4
-)
-
-
 clear_button = ctk.CTkButton(
     header_buttons,
     text="Clear All",
-    width=80,
+    width=85,
     height=32,
     corner_radius=8,
     fg_color=C["blue_dark"],
@@ -1295,7 +1142,7 @@ clear_button.pack(
 )
 
 
-# Month title
+# Month
 
 month_header = ctk.CTkFrame(
     app,
@@ -1309,7 +1156,7 @@ month_header.pack(
 )
 
 
-month_title = ctk.CTkLabel(
+ctk.CTkLabel(
     month_header,
     text="Expenses · " + datetime.now().strftime("%B %Y"),
     text_color=C["text"],
@@ -1317,9 +1164,7 @@ month_title = ctk.CTkLabel(
         size=17,
         weight="bold"
     )
-)
-
-month_title.pack(
+).pack(
     side="left"
 )
 
@@ -1338,14 +1183,7 @@ summary.pack(
 )
 
 
-summary_cards = []
-main_text_labels = []
-muted_labels = []
-input_widgets = []
-secondary_buttons = []
-
-
-def create_summary_card(title, value, color=None):
+def create_summary_card(title, value):
     card = ctk.CTkFrame(
         summary,
         height=92,
@@ -1364,9 +1202,7 @@ def create_summary_card(title, value, color=None):
 
     card.pack_propagate(False)
 
-    summary_cards.append(card)
-
-    title_label = ctk.CTkLabel(
+    ctk.CTkLabel(
         card,
         text=title,
         text_color=C["muted"],
@@ -1374,20 +1210,16 @@ def create_summary_card(title, value, color=None):
             size=9,
             weight="bold"
         )
-    )
-
-    title_label.pack(
+    ).pack(
         anchor="w",
         padx=14,
         pady=(11, 3)
     )
 
-    muted_labels.append(title_label)
-
     value_label = ctk.CTkLabel(
         card,
         text=value,
-        text_color=color or C["text"],
+        text_color=C["text"],
         font=ctk.CTkFont(
             size=17,
             weight="bold"
@@ -1398,8 +1230,6 @@ def create_summary_card(title, value, color=None):
         anchor="w",
         padx=14
     )
-
-    main_text_labels.append(value_label)
 
     return value_label
 
@@ -1430,8 +1260,6 @@ budget_card.pack(
 )
 
 budget_card.pack_propagate(False)
-
-summary_cards.append(budget_card)
 
 
 ctk.CTkLabel(
@@ -1525,7 +1353,6 @@ left_panel = ctk.CTkFrame(
     border_color=C["border"]
 )
 
-
 left_panel.pack(
     side="left",
     fill="both",
@@ -1542,7 +1369,6 @@ right_panel = ctk.CTkFrame(
     border_width=1,
     border_color=C["border"]
 )
-
 
 right_panel.pack(
     side="right",
@@ -1576,7 +1402,9 @@ amount_entry = ctk.CTkEntry(
     height=37,
     corner_radius=9,
     fg_color=C["input"],
-    border_color=C["border2"]
+    border_color=C["border2"],
+    text_color=C["text"],
+    placeholder_text_color=C["muted"]
 )
 
 amount_entry.pack(
@@ -1584,8 +1412,6 @@ amount_entry.pack(
     padx=18,
     pady=3
 )
-
-input_widgets.append(amount_entry)
 
 
 category_box = ctk.CTkComboBox(
@@ -1596,7 +1422,9 @@ category_box = ctk.CTkComboBox(
     corner_radius=9,
     fg_color=C["input"],
     border_color=C["border2"],
-    button_color=C["blue_dark"]
+    text_color=C["text"],
+    button_color=C["blue_dark"],
+    button_hover_color=C["blue_hover"]
 )
 
 category_box.pack(
@@ -1607,8 +1435,6 @@ category_box.pack(
 
 category_box.set("Food")
 
-input_widgets.append(category_box)
-
 
 note_entry = ctk.CTkEntry(
     left_panel,
@@ -1616,7 +1442,9 @@ note_entry = ctk.CTkEntry(
     height=37,
     corner_radius=9,
     fg_color=C["input"],
-    border_color=C["border2"]
+    border_color=C["border2"],
+    text_color=C["text"],
+    placeholder_text_color=C["muted"]
 )
 
 note_entry.pack(
@@ -1624,8 +1452,6 @@ note_entry.pack(
     padx=18,
     pady=3
 )
-
-input_widgets.append(note_entry)
 
 
 payment_box = ctk.CTkComboBox(
@@ -1635,7 +1461,9 @@ payment_box = ctk.CTkComboBox(
     corner_radius=9,
     fg_color=C["input"],
     border_color=C["border2"],
-    button_color=C["blue_dark"]
+    text_color=C["text"],
+    button_color=C["blue_dark"],
+    button_hover_color=C["blue_hover"]
 )
 
 payment_box.pack(
@@ -1645,8 +1473,6 @@ payment_box.pack(
 )
 
 payment_box.set("Cash")
-
-input_widgets.append(payment_box)
 
 
 button_row = ctk.CTkFrame(
@@ -1703,10 +1529,14 @@ ctk.CTkLabel(
 )
 
 
+# Fixed dark scroll area
+
 expense_list = ctk.CTkScrollableFrame(
     left_panel,
-    fg_color="transparent",
-    scrollbar_button_color=C["border2"]
+    fg_color=C["panel"],
+    border_width=0,
+    scrollbar_button_color=C["border2"],
+    scrollbar_button_hover_color=C["border"]
 )
 
 expense_list.pack(
